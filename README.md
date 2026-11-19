@@ -180,6 +180,39 @@ The lock lets deploys from many repos take turns on one Mac, since they share it
 [`pod-install`](https://github.com/alexdlaird/shipshape/blob/main/pod-install/action.yml) forces CocoaPods' CDN client
 onto HTTP/1.1 and retries transient CDN errors.
 
+### Pick a Runner When Minutes Run Out
+
+```yaml
+jobs:
+  runner:
+    runs-on: [self-hosted]
+    permissions:
+      actions: read
+      checks: read
+    outputs:
+      runs-on: ${{ steps.pick.outputs.runs-on }}
+    steps:
+      - name: Pick the runner
+        id: pick
+        uses: alexdlaird/shipshape/pick-runner@v1
+        with:
+          token: ${{ github.token }}
+          self-hosted-runs-on: '["self-hosted", "macos"]'
+
+  test:
+    needs: [runner]
+    runs-on: ${{ fromJSON(needs.runner.outputs.runs-on) }}
+```
+
+GitHub refuses to start a private repo's GitHub-hosted jobs once the account's included minutes run out (or a payment
+fails), and a refused job can't react.
+[`pick-runner`](https://github.com/alexdlaird/shipshape/blob/main/pick-runner/action.yml) reads the history instead:
+if the latest GitHub-hosted job this billing cycle was refused, the run's jobs go to self-hosted runners; if it ran, or
+there was none, to GitHub-hosted ones. Minutes are per account, so `repo-slugs` can read other repos' history too.
+
+The picker's own job must run on a self-hosted runner, since a GitHub-hosted one is refused too. The first run after
+minutes run out is refused before the picker can know; re-run all its jobs (not only the failed ones) so it picks again.
+
 ## Documentation
 
 Each action's inputs and outputs are documented in its `action.yml`. For complete workflows built from them, see
@@ -203,6 +236,7 @@ and [Helium](https://github.com/HeliumEdu/frontend/blob/main/.github/workflows/r
 | [`ios-deploy-lock`](https://github.com/alexdlaird/shipshape/blob/main/ios-deploy-lock/action.yml) | Take turns deploying iOS apps on a shared Mac |
 | [`pod-install`](https://github.com/alexdlaird/shipshape/blob/main/pod-install/action.yml) | Run `pod install`, surviving CocoaPods' CDN |
 | [`select-xcode`](https://github.com/alexdlaird/shipshape/blob/main/select-xcode/action.yml) | Select the newest stable Xcode |
+| [`pick-runner`](https://github.com/alexdlaird/shipshape/blob/main/pick-runner/action.yml) | Pick GitHub-hosted or self-hosted runners by whether minutes ran out |
 
 ## Contributing
 

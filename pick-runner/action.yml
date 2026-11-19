@@ -1,0 +1,69 @@
+name: 'Pick Runner'
+description: "Choose GitHub-hosted or self-hosted runners for a run's jobs, by whether the account's latest GitHub-hosted job ran or was refused for billing (minutes run out, or a payment failed)."
+
+inputs:
+  token:
+    description: "A token that can read runs and jobs (actions: read) and check-run annotations (checks: read) in every repo in repo-slugs"
+    required: true
+  force-self-hosted:
+    description: "Pick self-hosted runners whatever the history says"
+    required: false
+    default: 'false'
+  repo-slugs:
+    description: "The repos whose history to read, as owner/repo, one per line. Minutes are per account, so a refusal in any of them counts"
+    required: false
+    default: ${{ github.repository }}
+  since:
+    description: "The first day (YYYY-MM-DD, UTC) of the billing cycle to read; blank is the first of this month, when included minutes reset"
+    required: false
+    default: ''
+  runs-to-read:
+    description: "How many of each repo's newest runs in the cycle to read (at most 100)"
+    required: false
+    default: '50'
+  refused-message:
+    description: "Text in the annotation of a job GitHub refused to start for billing"
+    required: false
+    default: 'The job was not started because'
+  on-error:
+    description: "The pick when the history can't be read: self-hosted (since this action runs on one) or github-hosted"
+    required: false
+    default: 'self-hosted'
+  github-hosted-runs-on:
+    description: "The runs-on value (JSON) for GitHub-hosted runners"
+    required: false
+    default: '"ubuntu-latest"'
+  self-hosted-runs-on:
+    description: "The runs-on value (JSON) for self-hosted runners"
+    required: false
+    default: '["self-hosted"]'
+
+outputs:
+  self-hosted:
+    description: "'true' when self-hosted runners were picked, else 'false'"
+    value: ${{ steps.pick.outputs.self_hosted }}
+  runs-on:
+    description: "The picked runs-on value (JSON), for fromJSON() in a job's runs-on"
+    value: ${{ steps.pick.outputs.runs_on }}
+  reason:
+    description: "Why those runners were picked"
+    value: ${{ steps.pick.outputs.reason }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Pick the runner
+      id: pick
+      shell: bash
+      env:
+        PYTHONPATH: ${{ github.action_path }}/..
+        TOKEN: ${{ inputs.token }}
+        FORCE_SELF_HOSTED: ${{ inputs.force-self-hosted }}
+        REPO_SLUGS: ${{ inputs.repo-slugs }}
+        SINCE: ${{ inputs.since }}
+        RUNS_TO_READ: ${{ inputs.runs-to-read }}
+        REFUSED_MESSAGE: ${{ inputs.refused-message }}
+        ON_ERROR: ${{ inputs.on-error }}
+        GITHUB_HOSTED_RUNS_ON: ${{ inputs.github-hosted-runs-on }}
+        SELF_HOSTED_RUNS_ON: ${{ inputs.self-hosted-runs-on }}
+      run: python3 "${{ github.action_path }}/pick-runner.py"

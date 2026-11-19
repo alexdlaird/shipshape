@@ -6,6 +6,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased](https://github.com/alexdlaird/shipshape/compare/1.4.4...HEAD)
 
+### Added
+
+- `pick-runner`, to pick GitHub-hosted or self-hosted runners by whether the account's minutes ran out.
+
 ## [1.4.4](https://github.com/alexdlaird/shipshape/compare/1.4.3...1.4.4) - 2026-11-07
 
 ### Changed
